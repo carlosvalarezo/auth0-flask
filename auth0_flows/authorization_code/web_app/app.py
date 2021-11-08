@@ -1,7 +1,9 @@
 from functools import wraps
 from pathlib import Path
+import http.client
 import os
 import ssl
+import base64
 
 from dotenv import load_dotenv, find_dotenv
 from flask import Flask
@@ -29,14 +31,17 @@ SERVER_PORT = os.getenv("SERVER_PORT")
 ALGORITHMS = ['RS256']
 API_AUDIENCE = f'{SERVER_ENV}:{SERVER_PORT}/test-one'
 API_BASE_URL = f'https://{AUTH0_DOMAIN}'
+AUTH0_CLIENT_ID = os.getenv("AUTH0_CLIENT_ID")
+AUTH0_CLIENT_SECRET = os.getenv("AUTH0_CLIENT_SECRET")
 
 auth0 = oauth.register(
     'auth0',
-    client_id=os.getenv("AUTH0_CLIENT_ID"),
-    client_secret=os.getenv("AUTH0_CLIENT_SECRET"),
+    client_id=AUTH0_CLIENT_ID,
+    client_secret=AUTH0_CLIENT_SECRET,
     api_base_url=f'{API_BASE_URL}',
     access_token_url=f'{API_BASE_URL}/oauth/token',
     authorize_url=f'{API_BASE_URL}/authorize',
+    response_type='code',
     client_kwargs={
         'scope': 'openid profile email',
     },
@@ -48,12 +53,26 @@ def home():
     return render_template('login.html')
 
 
+@app.route('/login')
+def login():
+    return auth0.authorize_redirect(redirect_uri=f'{SERVER_ENV}:{SERVER_PORT}/callback',
+                                    audience=f"{SERVER_ENV}:{SERVER_PORT}/test-one",
+                                    response_type="code")
+
+
 @app.route('/callback')
 def callback_handling():
-    # Handles response from token endpoint
-    auth0.authorize_access_token()
-    resp = auth0.get('userinfo')
-    userinfo = resp.json()
+    authorization_code = request.args.get('code')
+    token, id_token = request_jwt_token(authorization_code=authorization_code)
+    # Both token & id_token are JWT tokens. At this point they are bytes. They need to be decoded in utf-8 format
+    # Parse from byte to string
+    str_id_token = str(id_token)
+    # Split the id_token and take the second part (the payload)
+    str_userinfo = str_id_token.split('.')[1] + '=='
+    # Decode from base64 and that output need to be decoded to utf-8
+    decoded_userinfo = base64.b64decode(str_userinfo).decode("utf-8")
+    # Now convert the string into JSON object to load the data
+    userinfo = json.loads(decoded_userinfo)
 
     # Store the user information in flask session.
     session['jwt_payload'] = userinfo
@@ -62,12 +81,35 @@ def callback_handling():
         'name': userinfo['name'],
         'picture': userinfo['picture']
     }
+
+    # Call the API with the token
+    call_api(token)
     return redirect('/dashboard')
 
 
-@app.route('/login')
-def login():
-    return auth0.authorize_redirect(redirect_uri=f'{SERVER_ENV}:{SERVER_PORT}/callback')
+def request_jwt_token(authorization_code, state=str(os.urandom(24))):
+    conn = http.client.HTTPSConnection(AUTH0_DOMAIN)
+    # "grant_type": "authorization_code" means that the authorization is requested
+    # through an authorization_code: code
+
+    payload = {
+        "client_secret": AUTH0_CLIENT_SECRET,
+        "client_id": AUTH0_CLIENT_ID,
+        "code": authorization_code,
+        "redirect_uri": f'{SERVER_ENV}:{SERVER_PORT}/callback',
+        "grant_type": "authorization_code",
+        "response_type": "token",
+        "state": state,
+        "scope": 'openid profile email'
+    }
+    headers = {'content-type': "application/json"}
+    conn.request("POST", '/oauth/token', json.dumps(payload), headers)
+
+    res = conn.getresponse()
+    data = res.read()
+    token = json.loads(data.decode('utf-8')).get('access_token')
+    id_token = json.loads(data.decode('utf-8')).get('id_token')
+    return token, id_token
 
 
 def requires_auth(f):
@@ -94,8 +136,28 @@ def logout():
     # Clear session stored data
     session.clear()
     # Redirect user to logout endpoint
-    params = {'returnTo': url_for('home', _external=True), 'client_id': os.getenv('AUTH0_CLIENT_ID')}
+    params = {'returnTo': url_for('home', _external=True), 'client_id': AUTH0_CLIENT_ID}
     return redirect(auth0.api_base_url + '/v2/logout?' + urlencode(params))
+
+
+def call_api(token):
+    certificate_file = f"{os.getcwd()}/certs/localhost.crt"
+    key_file = f"{os.getcwd()}/certs/localhost.key"
+    context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
+    context.load_cert_chain(certfile=certificate_file, keyfile=key_file)
+    conn = http.client.HTTPSConnection("localhost", port=443, context=context)
+
+    headers = {
+        'content-type': "application/json",
+        'authorization': f"Bearer {token}"
+    }
+
+    conn.request("GET", "/api/v1/protected", headers=headers)
+
+    res = conn.getresponse()
+    data = res.read()
+
+    print(data.decode("utf-8"))
 
 
 def get_token_auth_header():
@@ -124,12 +186,6 @@ def requires_api_auth(f):
         return f(payload, *args, **kwargs)
 
     return wrapper
-
-
-@app.route('/api/v1/protected')
-@requires_api_auth
-def protected(jwt):
-    return f'Oh happy day!'
 
 
 class AuthError(Exception):
@@ -197,6 +253,12 @@ def verify_decode_jwt(token):
             'code': 'invalid_header',
             'description': 'Unable to find the appropriate key.'
         }, 400)
+
+
+@app.route('/api/v1/protected')
+@requires_api_auth
+def protected(jwt):
+    return f'Oh happy day!'
 
 
 # Note: On exporting the env variable FLASK_APP=app.py and the running the app with python -m flask run --reload

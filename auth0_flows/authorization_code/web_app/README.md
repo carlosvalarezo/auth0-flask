@@ -1,16 +1,30 @@
-# Auth0 web & API auth 
- 
-This repo is showing how to write a web app that gets authenticated using Auth0 & uses an API token to hit a protected endpoint through a python client.
-It also implements the use of `Authorization code` to request API access tokens: [Official documentation](https://auth0.com/docs/authorization/flows/call-your-api-using-the-authorization-code-flow#request-tokens)
+#Authorization code flow
 
-## Run
-Get the AUTH0_DOMAIN, AUTH0_CLIENT_SECRET, AUTH0_CLIENT_ID, AUTH0_API_CLIENT_ID, AUTH0_API_CLIENT_SECRET from Auth0. Replace the values in the `.env.example` and rename the file to `.env`. Execute:
-```shell
-sh start.sh
-```
+> Because regular web apps are server-side apps where the source code is not publicly exposed, 
+they can use the Authorization Code Flow (defined in OAuth 2.0 RFC 6749, section 4.1), which exchanges an Authorization 
+Code for a token. Your app must be server-side because during this exchange, 
+you must also pass along your application's Client Secret, which must always be kept secure, 
+and you will have to store it in your client.
+This repo shows how to implement authorization code flow.
+
+[More details](https://auth0.com/docs/authorization/flows/authorization-code-flow)
+
+## Details 
+1. It prompts loggin credentials in order to access to my app using auth0 login page
+2. It asks for permissions to see the Google profile (since I am using Google to authenticate)
+3. If the authentication is successful, Auth0 redirects the user to my app dashboard
+4. Behind the scenes my app receives a code that exchanges for a token to get access to a protected endpoint in my app
+6. The app hits the protected endpoint using the token
+
+## Auth0 web & API auth 
+ 
+The code is about a web app that gets authenticated using Auth0 login page. It receives a code that exchanges for a 
+token. With the token the app hits a protected endpoint. The authentication process also includes information about
+the logged user.
+
 In a real scenario:
 - A web app (could be mobile app, cli, another type of app) authenticates against Auth0.
-- If the login was successful, using API_SECRET_ID & API_SECRET_PASSWORD it hits Auth0 again to request an API token with those credentials
+- If the login was successful, Auth) returns a code that will be exchanged using API_SECRET_ID & API_SECRET_PASSWORD it hits Auth0 again to request an API token with those credentials
 - If API_SECRET_ID & API_SECRET_PASSWORD are valid then, Auth0 generates and sends an API token to the client.
 - The client includes this token to interact with the API (the API here is an API developed to be the backend of the app). Auth0 also has an APi but the code in this repo is not interacting with that API yet.
 
@@ -45,22 +59,18 @@ Normally these tokens travel in the header of the request using `Autorization` a
 3. Go to Test and discover the `client_id` (AUTH0_API_CLIENT_ID), `secret_id` (AUTH0_API_CLIENT_SECRET)
 
 ## Run
-
-Execute in another terminal the following command, to get into the container:
+Get the AUTH0_DOMAIN, AUTH0_CLIENT_SECRET, AUTH0_CLIENT_ID, AUTH0_API_CLIENT_ID, AUTH0_API_CLIENT_SECRET from Auth0. 
+Replace the values in the `.env.example` and rename the file to `.env`. Execute:
 ```shell
-docker exec -it python-auth0 bash 
-```
-Once inside the container, execute:
-
-```shell
-python client/api_client.py
+sh start.sh
 ```
 
 ## Notes:
 
-The env variable `FLASK_APP=app.py` indicates the file that contains the flask application. If this env variable is set the command to run the application is `flask run --reload` (for development). If this variable is not passed through the way to run the application is with `python app.py -h 0.0.0.0`.
+The env variable `FLASK_APP=app.py` indicates the file that contains the flask application.
+If this env variable is set the command to run the application is `flask run --reload` (for development). 
+If this variable is not passed through the way to run the application is with `python app.py -h 0.0.0.0`.
 The outcome should be: `Oh happy day!`
 
 ## TODO
-
 Update the code according to this: https://blog.miguelgrinberg.com/post/running-your-flask-application-over-https

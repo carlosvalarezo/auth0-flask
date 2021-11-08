@@ -1,3 +1,7 @@
+In client credentials flow normally the scenario is a machine to machine scenario: a script, a shell, a cron or any other client machine where the entity that can grant access to a protected resource is the end-user. Therefore, no end-user authorization is needed.
+
+It does not need a UI since the authentication is done through client_credentials.
+----
 # Auth0 web & API auth 
  
 This repo is showing how to write a web app that gets authenticated using Auth0 & uses an API token to hit a protected endpoint through a python client.

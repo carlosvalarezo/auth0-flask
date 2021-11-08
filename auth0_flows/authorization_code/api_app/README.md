@@ -1,3 +1,24 @@
+This repo shows how to implement authorization code flow.
+
+1. It loggins to my app using auth0 login page
+2. It asks for permissions to see the Google profile (since I am using Google to authenticate)
+3. If the authentication is successful, Auth0 redirects the user to my app dashboard
+4. Behind the scenes my app receives a code (as a result of the login with Google) that exchanges for a token to get access to a protected endpoint in my app
+5. Using the token it hits the protected endpoint.
+
+Reword this:
+
+--
+If the Client is a regular web app executing on a server, then the Authorization Code Flow is the flow you should use.
+Using this the Client can retrieve an Access Token and, optionally, a Refresh Token.
+It's considered the safest choice since the Access Token is passed directly to the web server hosting the Client,
+without going through the user's web browser and risking exposure.
+
+Authorization Code Flow
+Because regular web apps are server-side apps where the source code is not publicly exposed, they can use the Authorization Code Flow (defined in OAuth 2.0 RFC 6749, section 4.1), which exchanges an Authorization Code for a token. Your app must be server-side because during this exchange, you must also pass along your application's Client Secret, which must always be kept secure, and you will have to store it in your client.
+
+--
+
 # Auth0 web & API auth 
  
 This repo is showing how to write a web app that gets authenticated using Auth0 & uses an API token to hit a protected endpoint through a python client.

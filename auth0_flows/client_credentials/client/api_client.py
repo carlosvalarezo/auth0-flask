@@ -15,17 +15,21 @@ APP_PORT = os.getenv("APP_PORT")
 APP_SERVER = os.getenv("APP_SERVER")
 
 load_dotenv()
+
 # dotenv_path = Path('.env') DEFAULT LOCATION
 
 
-def get_auth0_api_token():
+def request_jwt_token_with_credentials():
     conn = http.client.HTTPSConnection(AUTH0_DOMAIN)
 
     payload = {
-        "client_id":  AUTH0_API_CLIENT_ID,
+        "client_id": AUTH0_API_CLIENT_ID,
         "client_secret": AUTH0_API_CLIENT_SECRET,
         "audience": f"{SERVER_ENV}:{SERVER_PORT}/test-one",
+        # "grant_type": "client_credentials" means that the authorization is requested
+        # through client_credentials: client_id & client_secret
         "grant_type": "client_credentials"
+
     }
 
     headers = {'content-type': "application/json"}
@@ -35,16 +39,17 @@ def get_auth0_api_token():
     res = conn.getresponse()
     data = res.read()
 
-    return json.loads(data.decode("utf-8")).get('access_token')
+    token = json.loads(data.decode("utf-8")).get('access_token')
+
+    return token
 
 
-def send_request_to_api():
+def send_request_to_api(bearer_token):
     certificate_file = f"{os.getcwd()}/certs/localhost.crt"
     key_file = f"{os.getcwd()}/certs/localhost.key"
     context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
     context.load_cert_chain(certfile=certificate_file, keyfile=key_file)
     conn = http.client.HTTPSConnection(host=APP_SERVER, port=APP_PORT, context=context)
-    bearer_token = get_auth0_api_token()
     headers = {
         'authorization': f"Bearer {bearer_token}"
     }
@@ -57,4 +62,5 @@ def send_request_to_api():
     print(data.decode("utf-8"))
 
 
-send_request_to_api()
+bearer_token_with_creds = request_jwt_token_with_credentials()
+send_request_to_api(bearer_token_with_creds)

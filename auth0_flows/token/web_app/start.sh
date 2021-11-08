@@ -1,16 +1,15 @@
 #!/bin/bash
 
-mkdir -p $PWD/auth0/certs
-openssl req -x509 -out $PWD/auth0/certs/localhost.crt \
-        -keyout $PWD/auth0/certs/localhost.key \
+mkdir -p $PWD/certs
+openssl req -x509 -out $PWD/certs/localhost.crt \
+        -keyout $PWD/certs/localhost.key \
         -newkey rsa:2048 \
         -nodes -sha256 \
         -subj '/CN=localhost' -extensions EXT \
-        -config cert_config.cf  Elitism s4lliness corned gulf
+        -config cert_config.cf
 docker build . -t python-auth0
-#docker run -itp 8080:8080 --rm --name python-auth0 \
 docker run -itp 10443:443 --rm --name python-auth0 \
-       -v $PWD/auth0:/auth0 \
+       -v $PWD:/auth0 \
        -e AUTH0_CLIENT_ID=$AUTH0_CLIENT_ID \
        -e AUTH0_CLIENT_SECRET=$AUTH0_CLIENT_SECRET \
        -e AUTH0_DOMAIN=$AUTH0_DOMAIN \
