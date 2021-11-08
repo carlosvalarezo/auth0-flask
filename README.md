@@ -1,18 +1,12 @@
-# Auth0 web & API auth 
- 
-This repo is showing how to write a web app that gets authenticated using Auth0 & uses an API token to hit a protected endpoint through a python client.
-It also implements the use of `Authorization code` to request API access tokens: [Official documentation](https://auth0.com/docs/authorization/flows/call-your-api-using-the-authorization-code-flow#request-tokens)
+# Auth0 authorization & authentication flows
+
+This repo shows the implementation of the different Auth0 flows both for authenticate and authorize a user both at web app level and hitting a protected API endpoint
 
 ## Run
-Get the AUTH0_DOMAIN, AUTH0_CLIENT_SECRET, AUTH0_CLIENT_ID, AUTH0_API_CLIENT_ID, AUTH0_API_CLIENT_SECRET from Auth0. Replace the values in the `.env.example` and rename the file to `.env`. Execute:
+Every flow implementation has its own start script
 ```shell
 sh start.sh
 ```
-In a real scenario:
-- A web app (could be mobile app, cli, another type of app) authenticates against Auth0.
-- If the login was successful, using API_SECRET_ID & API_SECRET_PASSWORD it hits Auth0 again to request an API token with those credentials
-- If API_SECRET_ID & API_SECRET_PASSWORD are valid then, Auth0 generates and sends an API token to the client.
-- The client includes this token to interact with the API (the API here is an API developed to be the backend of the app). Auth0 also has an APi but the code in this repo is not interacting with that API yet.
 
 One thing is getting access to the site through Auth0 either using a social account or connection to own DB  and another thing is hitting own APIs Auth0 protected.
 In order to get access to a site do this using a Google Account through Auth0:
@@ -43,18 +37,6 @@ Normally these tokens travel in the header of the request using `Autorization` a
 ![API in Auth0 menu](images/create_api.png)
 2. Assign a name, an identifier (a non-public URL of the API) 
 3. Go to Test and discover the `client_id` (AUTH0_API_CLIENT_ID), `secret_id` (AUTH0_API_CLIENT_SECRET)
-
-## Run
-
-Execute in another terminal the following command, to get into the container:
-```shell
-docker exec -it python-auth0 bash 
-```
-Once inside the container, execute:
-
-```shell
-python client/api_client.py
-```
 
 ## Notes:
 
