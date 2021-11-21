@@ -43,7 +43,7 @@ auth0 = oauth.register(
     authorize_url=f'{API_BASE_URL}/authorize',
     response_type='code',
     client_kwargs={
-        'scope': 'openid profile email',
+        'scope': 'openid profile email offline_access',
     },
 )
 
