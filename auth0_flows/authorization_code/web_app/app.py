@@ -175,19 +175,6 @@ def get_token_auth_header():
     return valid_token
 
 
-def requires_api_auth(f):
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        jwt = get_token_auth_header()
-        try:
-            payload = verify_decode_jwt(jwt)
-        except:
-            abort(403)
-        return f(payload, *args, **kwargs)
-
-    return wrapper
-
-
 class AuthError(Exception):
     def __init__(self, error, status_code):
         self.error = error
@@ -253,6 +240,19 @@ def verify_decode_jwt(token):
             'code': 'invalid_header',
             'description': 'Unable to find the appropriate key.'
         }, 400)
+
+
+def requires_api_auth(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        jwt = get_token_auth_header()
+        try:
+            payload = verify_decode_jwt(jwt)
+        except Exception as e:
+            abort(403)
+        return f(payload, *args, **kwargs)
+
+    return wrapper
 
 
 @app.route('/api/v1/protected')
