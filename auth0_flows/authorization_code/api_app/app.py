@@ -159,7 +159,7 @@ def logout():
     session.clear()
     # Redirect user to logout endpoint
     params = {'returnTo': url_for('home', _external=True), 'client_id': AUTH0_API_CLIENT_ID}
-    return redirect(auth0.api_base_url + '/v2/logout?' + urlencode(params))
+    return redirect(f"{API_BASE_URL}/v2/logout?{urlencode(params)}")
 
 
 def get_token_auth_header():
