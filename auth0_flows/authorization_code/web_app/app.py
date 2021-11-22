@@ -63,7 +63,7 @@ def login():
 @app.route('/callback')
 def callback_handling():
     authorization_code = request.args.get('code')
-    token, id_token = request_jwt_token(authorization_code=authorization_code)
+    token, id_token, refresh_token = request_jwt_token(authorization_code=authorization_code)
     # Both token & id_token are JWT tokens. At this point they are bytes. They need to be decoded in utf-8 format
     # Parse from byte to string
     str_id_token = str(id_token)
@@ -84,7 +84,35 @@ def callback_handling():
 
     # Call the API with the token
     call_api(token)
+    # Request a new token using the refresh token
+    new_token = request_token_from_refresh_token(refresh_token)
+    # This token will include a new refresh_token in case Reuse Interval in Refresh Token Rotation section
+    # is different than 0
+    call_api(new_token)
     return redirect('/dashboard')
+
+
+def request_token_from_refresh_token(refresh_token):
+    conn = http.client.HTTPSConnection(AUTH0_DOMAIN)
+
+    payload = {
+        "client_id": AUTH0_CLIENT_ID,
+        "client_secret": AUTH0_CLIENT_SECRET,
+        "grant_type": "refresh_token",
+        "refresh_token": refresh_token,
+        # Scope is optional in case I would like to request a new scope for this new token.
+        # Otherwise the scope used to request the first token is applied
+        # "scope": 'openid profile email'
+    }
+
+    headers = {'content-type': "application/json"}
+    conn.request("POST", '/oauth/token', json.dumps(payload), headers)
+
+    res = conn.getresponse()
+    data = res.read()
+    token = json.loads(data.decode('utf-8')).get('access_token')
+
+    return token
 
 
 def request_jwt_token(authorization_code, state=str(os.urandom(24))):
@@ -108,8 +136,9 @@ def request_jwt_token(authorization_code, state=str(os.urandom(24))):
     res = conn.getresponse()
     data = res.read()
     token = json.loads(data.decode('utf-8')).get('access_token')
+    refresh_token = json.loads(data.decode('utf-8')).get('refresh_token')
     id_token = json.loads(data.decode('utf-8')).get('id_token')
-    return token, id_token
+    return token, id_token, refresh_token
 
 
 def requires_auth(f):
